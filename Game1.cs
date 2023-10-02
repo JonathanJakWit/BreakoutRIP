@@ -2,21 +2,23 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
-//using SharpDX.Direct2D1;
 using System.Collections.Generic;
+using System.Drawing.Text;
 using System.Linq;
 using System.Security.Policy;
 
 namespace BreakoutRIP
 {
-    // Anpassa fönstret efter blocken (Idk how)
-    
-    // 14 block / (Finns men kan inte ses)
+    // 8 Rader block med olika färger / (ISH)
+    // Anpassa spel så att poäng skrivs ut på skärmen
+    // StartSkärm och GameOverSkärm som hanteras med 3 olika GameStates genom enum
+    // Båda ska ha en bakgrundsbild
+    // Startskärmen ska innehålla en animation genom spritesheet
+    // Button som startar spelet på StartSkärmen
+    // Skriv en timer och avsluta spelet efter X-antal sekunder
+    // GameOverSkärmen ska ha minst 5 sprites på slumpmässiga positioner
 
-    // Muskontrol //
-    // Namn och poäng i title //
-    // Boll inte nedkanten //
-    // Spelare får poäng för krossade block //
+    // Blocken ska va i en 2D Array istället för BlockList //
 
     // Maxspeed / Random Direction?
 
@@ -32,7 +34,14 @@ namespace BreakoutRIP
         private KeyboardState oldkeyboardState;
 
         private Texture2D blockTexture;
-        private List<Block> blockList = new List<Block>();
+        //private List<Block> blockList = new List<Block>();
+        private int blockRowCount = 8;
+        private int blockColumnCount = 14;
+        //private Block[,] block2DArray = new Block[8,14];
+        private Block[,] filledBlock2DArray;
+        private Block[,] block2DArray;
+
+        private Dictionary<int, Color> blockColorOrder;
 
         private Texture2D ballTexture;
         private Ball ball1;
@@ -40,6 +49,12 @@ namespace BreakoutRIP
         private Texture2D paddleTexture;
         private Paddle paddle1;
 
+        public enum GameStates
+        {
+            Start,
+            Playing,
+            GameOver
+        }
         public int PlayerPoints = 0;
 
         public int GameWindowWidthPixels = 1600;
@@ -55,6 +70,7 @@ namespace BreakoutRIP
 
             _graphics.PreferredBackBufferWidth = GameWindowWidthPixels;
             _graphics.PreferredBackBufferHeight = GameWindowHeightPixels;
+            //_graphics.IsFullScreen = true;
 
             Window.Title = "Breakout RIP - " + PlayerPoints;
         }
@@ -67,6 +83,17 @@ namespace BreakoutRIP
             newMouseState = oldMouseState;
             keyboardState = new KeyboardState();
             oldkeyboardState = keyboardState;
+
+            blockColorOrder = new Dictionary<int, Color>();
+            blockColorOrder.Add(1, Color.Red);
+            blockColorOrder.Add(2, Color.Orange);
+            blockColorOrder.Add(3, Color.Yellow);
+            blockColorOrder.Add(4, Color.Green);
+            blockColorOrder.Add(5, Color.Turquoise);
+            blockColorOrder.Add(6, Color.Blue);
+            blockColorOrder.Add(7, Color.DarkBlue);
+            blockColorOrder.Add(8, Color.DarkViolet);
+            blockColorOrder.Add(9, Color.LightGray);
 
             base.Initialize();
         }
@@ -81,23 +108,60 @@ namespace BreakoutRIP
             ballTexture = Content.Load<Texture2D>("Images/ball_purple");
             paddleTexture = Content.Load<Texture2D>("Images/paddle");
 
-            int blockCount = 14;
-            for (int i = 0; i < blockCount; i++)
+            //int blockCount = 14;
+            //for (int i = 0; i < blockCount; i++)
+            //{
+            //    Vector2 position = new Vector2(i * blockTexture.Width, 10);
+            //    Block block = new Block(blockTexture, position);
+            //    blockList.Add(block);
+            //}
+
+
+            //int blockColumnCount = 14;
+            //int blockRowCount = 8;
+
+            // Initialize block2darray
+            Vector2 fBP = new Vector2(-100, -100);
+            Block fB = new Block(blockTexture, fBP, Color.White);
+            filledBlock2DArray = new Block[,]
             {
-                Vector2 position = new Vector2(i * blockTexture.Width, 10);
-                Block block = new Block(blockTexture, position);
-                blockList.Add(block);
+                { fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB },
+                { fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB },
+                { fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB },
+                { fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB },
+                { fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB },
+                { fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB },
+                { fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB },
+                { fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB },
+            };
+            block2DArray = filledBlock2DArray;
+            // End of Initialization of array
+
+            for (int rowIndex = 0;rowIndex < blockRowCount;rowIndex++)
+            {
+                for (int columnIndex = 0; columnIndex < blockColumnCount; columnIndex++)
+                {
+                    Vector2 curBlockPos = new Vector2(columnIndex * blockTexture.Width, rowIndex * blockTexture.Height);
+                    Color color = blockColorOrder[rowIndex+1];
+
+                    Block block = new Block(blockTexture, curBlockPos, color);
+                    block2DArray[rowIndex, columnIndex] = block;
+                }
             }
 
-            int newWindowWidth = blockCount * blockTexture.Width + 50;
+            int newWindowWidth = blockColumnCount * blockTexture.Width;
             GameWindowWidthPixels = newWindowWidth;
+            int newWindowHeight = (blockRowCount * blockTexture.Height) * 2 - 100;
+            GameWindowHeightPixels = newWindowHeight;
+
             _graphics.PreferredBackBufferWidth = GameWindowWidthPixels;
             _graphics.PreferredBackBufferHeight = GameWindowHeightPixels;
+            _graphics.ApplyChanges();
 
-            Vector2 ballPos = new Vector2(GameWindowWidthPixels / 2 - ballTexture.Width / 2, GameWindowHeightPixels / 2);
-            ball1 = new Ball(ballTexture, ballPos);
+            Vector2 ballPos = new Vector2(GameWindowWidthPixels / 2 - ballTexture.Width / 2, GameWindowHeightPixels / 2 + 80);
+            ball1 = new Ball(ballTexture, ballPos, GameWindowWidthPixels);
 
-            Vector2 paddlePos = new Vector2(GameWindowWidthPixels / 2 - paddleTexture.Width / 2, GameWindowHeightPixels - paddleTexture.Height - 5);
+            Vector2 paddlePos = new Vector2(GameWindowWidthPixels / 2 - paddleTexture.Width / 2, GameWindowHeightPixels - paddleTexture.Height / 2 - 5);
             paddle1 = new Paddle(paddleTexture, paddlePos);
         }
 
@@ -124,35 +188,72 @@ namespace BreakoutRIP
             }
             oldMouseState = mouseState;
 
-            // Check Collisions
+            // Check Collisions Start //
             if (ball1.CollisionRectangle.Intersects(paddle1.CollisionRectangle))
             {
                 //ball1.ChangeDirection(paddle1.DirectionString, true);
-                ball1.ChangeDirection();
+                ball1.TestChangeDirection(paddle1, true);
+                //ball1.ChangeDirection();
             }
 
-            foreach (Block block in blockList)
+            for (int rowIndex = 0; rowIndex < blockRowCount; rowIndex++)
             {
-                if (ball1.CollisionRectangle.Intersects(block.CollisionRectangle))
+                for (int columnIndex = 0; columnIndex < blockColumnCount; columnIndex++)
                 {
-                    block.IsBroken = true;
-                    PlayerPoints++;
-
-                    //ball1.ChangeDirection("BLOCK");
-                    ball1.ChangeDirection();
+                    if (!block2DArray[rowIndex, columnIndex].IsBroken)
+                    {
+                        if (ball1.CollisionRectangle.Intersects(block2DArray[rowIndex, columnIndex].CollisionRectangle))
+                        {
+                            block2DArray[rowIndex, columnIndex].IsBroken = true;
+                            PlayerPoints++;
+                            ball1.TestChangeDirection(paddle1);
+                            //ball1.ChangeDirection();
+                            rowIndex = blockRowCount + 1;
+                            columnIndex = blockColumnCount + 1;
+                        }
+                    }
                 }
             }
+            // Check Collisions End //
 
-            List<Block> newblockList = new List<Block>();
-            foreach(Block block in blockList)
+            //foreach (Block block in blockList)
+            //{
+            //    if (ball1.CollisionRectangle.Intersects(block.CollisionRectangle))
+            //    {
+            //        block.IsBroken = true;
+            //        PlayerPoints++;
+
+            //        //ball1.ChangeDirection("BLOCK");
+            //        ball1.ChangeDirection();
+            //    }
+            //}
+
+            
+
+            //List<Block> newblockList = new List<Block>();
+            //foreach(Block block in blockList)
+            //{
+            //    if (!block.IsBroken)
+            //    {
+            //        newblockList.Add(block);
+            //    }
+            //}
+            //blockList.Clear();
+            //blockList.AddRange(newblockList);
+
+            //Block[,] newBlock2DArray = new Block[blockRowCount,blockColumnCount];
+            Block[,] newBlock2DArray = filledBlock2DArray;
+            for (int rowIndex = 0; rowIndex < blockRowCount; rowIndex++)
             {
-                if (!block.IsBroken)
+                for (int columnIndex = 0; columnIndex < blockColumnCount; columnIndex++)
                 {
-                    newblockList.Add(block);
+                    if (!block2DArray[rowIndex, columnIndex].IsBroken)
+                    {
+                        newBlock2DArray[rowIndex, columnIndex] = block2DArray[rowIndex, columnIndex];
+                    }
                 }
             }
-            blockList.Clear();
-            blockList.AddRange(newblockList);
+            block2DArray = newBlock2DArray;
 
             keyboardState = Keyboard.GetState();
 
@@ -169,11 +270,22 @@ namespace BreakoutRIP
             _spriteBatch.Begin();
 
             // TODO: Add your drawing code here
-            foreach (Block block in blockList)
+            //foreach (Block block in blockList)
+            //{
+            //    if (!block.IsBroken)
+            //    {
+            //        _spriteBatch.Draw(block.Texture, block.CollisionRectangle, block.Color);
+            //    }
+            //}
+
+            for (int rowIndex = 0; rowIndex < blockRowCount; rowIndex++)
             {
-                if (!block.IsBroken)
+                for (int columnIndex = 0; columnIndex < blockColumnCount; columnIndex++)
                 {
-                    _spriteBatch.Draw(block.Texture, block.CollisionRectangle, block.Color);
+                    if (!block2DArray[rowIndex, columnIndex].IsBroken)
+                    {
+                        _spriteBatch.Draw(block2DArray[rowIndex, columnIndex].Texture, block2DArray[rowIndex, columnIndex].CollisionRectangle, block2DArray[rowIndex, columnIndex].Color);
+                    }
                 }
             }
 
@@ -194,18 +306,21 @@ namespace BreakoutRIP
         public Color Color;
         public bool IsBroken;
 
-        public Block(Texture2D texture, Vector2 position)
+        public Block(Texture2D texture, Vector2 position, Color color)
         {
             Texture = texture;
             Position = position;
             CollisionRectangle = new Rectangle(((int)position.X), ((int)position.Y), texture.Width, texture.Height);
-            Color = Color.White;
+            Color = color;
             IsBroken = false;
         }
 
         public void Update()
         {
-
+            if (IsBroken)
+            {
+                //Vector2 
+            }
         }
     }
     public class Ball
@@ -216,19 +331,69 @@ namespace BreakoutRIP
         public Color Color;
         public string DirectionString;
         private int speed;
-        private int maxSpeed;
+        //private int maxSpeed;
         private Vector2 direction;
 
-        public Ball(Texture2D texture, Vector2 position)
+        private int windowSizeX;
+
+        public Ball(Texture2D texture, Vector2 position, int windowXSize)
         {
             Texture = texture;
             Position = position;
             CollisionRectangle = new Rectangle(((int)position.X), ((int)position.Y), texture.Width, texture.Height);
             Color = Color.White;
             DirectionString = "NONE";
-            speed = 5;
-            maxSpeed = 8;
-            direction = new Vector2(0.8f, speed);
+            speed = 7;
+            //maxSpeed = 10;
+            direction = new Vector2(1.2f, speed);
+
+            windowSizeX = windowXSize;
+        }
+
+        private void UpdateRectangle(Vector2 newPos)
+        {
+            CollisionRectangle = new Rectangle((int)newPos.X, (int)newPos.Y, Texture.Width, Texture.Height);
+        }
+
+        public void TestChangeDirection(Paddle paddle, bool isPaddle=false)
+        {
+            float changeXValue = 0f;
+
+            if (isPaddle)
+            {
+                Vector2 paddleMidPoint = new Vector2(paddle.Position.X + paddle.Texture.Width / 2, paddle.Position.Y);
+                Vector2 ballMidPoint = new Vector2(Position.X + Texture.Width / 2, Position.Y + Texture.Height / 2);
+
+                if (ballMidPoint.X > paddleMidPoint.X)
+                {
+                    changeXValue = ballMidPoint.X - paddleMidPoint.X;
+                    changeXValue = changeXValue / 10;
+                }
+                else if (ballMidPoint.X < paddleMidPoint.X)
+                {
+                    changeXValue = paddleMidPoint.X - ballMidPoint.X;
+                    changeXValue = changeXValue / 10;
+                    changeXValue = changeXValue * -1;
+                }
+                else
+                {
+                    changeXValue = ballMidPoint.X - paddleMidPoint.X + 0.1f;
+                    changeXValue = changeXValue / 10;
+                }
+            }
+            else
+            {
+                changeXValue = direction.X * -1 * 0.75f;
+            }
+
+            Vector2 newDir = new Vector2(direction.X + changeXValue, direction.Y*-1);
+            //Vector2 newDir = new Vector2(direction.X, direction.Y*-1);
+            direction = newDir;
+            if (isPaddle)
+            {
+                Position = new Vector2(Position.X + direction.X, Position.Y + direction.Y);
+                UpdateRectangle(Position);
+            }
         }
 
         public void ChangeDirection(bool outOfBounds = false)
@@ -273,159 +438,13 @@ namespace BreakoutRIP
                     }
 
                 }
-                //if (direction.X > 0f) // Moving RIGHT
-                //{
-                //    if (direction.Y > 0f) // Moving RIGHT & DOWN
-                //    {
-                //        Vector2 newDir = new Vector2(direction.X, direction.Y * -1);
-                //        direction = newDir;
-                //    }
-                //    else if (direction.Y < 0f) // Moving RIGHT & UP
-                //    {
-                //        Vector2 newDir = new Vector2(direction.X, direction.Y * -1);
-                //        direction = newDir;
-                //    }
-                //    else
-                //    {
-                //        Vector2 newDir = new Vector2(direction.X, direction.Y * -1);
-                //        direction = newDir;
-                //    }
-                //}
-                //else if (direction.X < 0f) // Moving LEFT
-                //{
-                //    if (direction.Y > 0f) // Moving LEFT & DOWN
-                //    {
-                //        Vector2 newDir = new Vector2(direction.X, direction.Y * -1);
-                //        direction = newDir;
-                //    }
-                //    else if (direction.Y < 0f) // LEFT RIGHT & UP
-                //    {
-                //        Vector2 newDir = new Vector2(direction.X, direction.Y * -1);
-                //        direction = newDir;
-                //    }
-                //    else
-                //    {
-                //        Vector2 newDir = new Vector2(direction.X, direction.Y * -1);
-                //        direction = newDir;
-                //    }
-                //}
-            
-            //if (outOfBounds && Position.X <= 0 && Position.X >= 1600 - Texture.Width)
-            //{
-            //    direction.X = -speed;
-            //}
         }
-
-        //public  void ChangeDirection(string newDirectionString, bool isPaddleCollition=false)
-        //{
-            //if (DirectionString == "NONE")
-            //if (false)
-            //{
-            //    if (newDirectionString == "NONE")
-            //    {
-            //        if (isPaddleCollition)
-            //        {
-            //            Vector2 newDirection = new Vector2(direction.X, direction.Y * -1);
-            //            direction = newDirection;
-            //        }
-            //    }
-            //    else if (newDirectionString == "LEFT")
-            //    {
-            //        Vector2 newDirection = new Vector2(-speed, direction.Y * -1);
-            //        direction = newDirection;
-            //    }
-            //    else if (newDirectionString == "RIGHT")
-            //    {
-            //        Vector2 newDirection = new Vector2(speed, direction.Y * -1);
-            //        direction = newDirection;
-            //    }
-            //}
-            //else
-            //{
-            //    if (direction.X > 0) // Moving RIGHT
-            //    {
-            //        if (direction.Y > 0) // Moving RIGHT & DOWN
-            //        {
-            //            Vector2 newDir = new Vector2(direction.X, direction.Y * -1);
-            //            direction = newDir;
-            //        }
-            //        else if (direction.Y < 0) // Moving RIGHT & UP
-            //        {
-            //            Vector2 newDir = new Vector2(direction.X, direction.Y * -1);
-            //            direction = newDir; 
-            //        }
-            //    }
-            //}
-
-            //if (DirectionString == "NONE")
-            //{
-            //    if (newDirectionString == "NONE")
-            //    {
-            //        if (isPaddleCollition)
-            //        {
-            //            Vector2 newDirection = new Vector2(direction.X, direction.Y *-1);
-            //            direction = newDirection;
-            //        }
-            //    }
-            //    else if (newDirectionString == "LEFT")
-            //    {
-            //        Vector2 newDirection = new Vector2(-speed, direction.Y*-1);
-            //        direction = newDirection;
-            //    }
-            //    else if (newDirectionString == "RIGHT")
-            //    {
-            //        Vector2 newDirection = new Vector2(speed, direction.Y*-1);
-            //        direction = newDirection;
-            //    }
-            //}
-            //else if (newDirectionString == "BLOCK")
-            //{
-            //    Vector2 newDirection = new Vector2(direction.X * -1, speed);
-            //    direction = newDirection;
-            //    if (DirectionString == "LEFT")
-            //    {
-            //        DirectionString = "RIGHT";
-            //    }
-            //    else if (DirectionString == "RIGHT")
-            //    {
-            //        DirectionString = "LEFT";
-            //    }
-            //}
-            //else
-            //{
-            //    if (DirectionString == "UP")
-            //    {
-            //        Vector2 newDirection = new Vector2(direction.X, speed);
-            //        direction = newDirection;
-            //        DirectionString = "DOWN";
-            //    }
-            //    else if (DirectionString == "DOWN")
-            //    {
-            //        Vector2 newDirection = new Vector2(direction.X, -speed);
-            //        direction = newDirection;
-            //        DirectionString = "UP";
-            //    }
-            //    else if (DirectionString == "LEFT") // HERE
-            //    {
-            //        Vector2 newDirection = new Vector2(direction.X * -1, direction.Y *-1);
-            //        direction = newDirection;
-            //        DirectionString = "RIGHT";
-            //    }
-            //    else if (DirectionString == "RIGHT")
-            //    {
-            //        Vector2 newDirection = new Vector2(direction.X * -1, direction.Y *-1);
-            //        direction = newDirection;
-            //        DirectionString = "LEFT";
-            //    }
-            //}
-
-        //}
 
         private bool CheckIfInBounds_X(Vector2 posToCheck)
         {
             bool inBoundsX = false;
 
-            if (posToCheck.X >= 0 && posToCheck.X <= 1600 - Texture.Width)
+            if (posToCheck.X >= 0 && posToCheck.X <= windowSizeX - Texture.Width)
             {
                 inBoundsX = true;
             }
@@ -462,7 +481,7 @@ namespace BreakoutRIP
 
         public void Update()
         {
-            Position = new Vector2(Position.X + direction.X, Position.Y  + direction.Y);
+            Position = new Vector2(Position.X + direction.X, Position.Y + direction.Y);
             if (CheckIfInBounds(Position))
             {
                 CollisionRectangle = new Rectangle(((int)Position.X), ((int)Position.Y), Texture.Width, Texture.Height);
@@ -481,6 +500,9 @@ namespace BreakoutRIP
                 CollisionRectangle = new Rectangle(((int)Position.X), ((int)Position.Y), Texture.Width, Texture.Height);
                 //ChangeDirection(true);
             }
+
+            //Position = new Vector2(Position.X + direction.X, Position.Y + direction.Y);
+            //CollisionRectangle = new Rectangle(((int)Position.X), ((int)Position.Y), Texture.Width, Texture.Height);
         }
     }
     public class Paddle
@@ -499,7 +521,7 @@ namespace BreakoutRIP
             CollisionRectangle = new Rectangle(((int)position.X), ((int)position.Y), texture.Width, texture.Height);
             Color = Color.White;
             DirectionString = "NONE";
-            speed = 10;
+            speed = 30;
         }
 
         private void UpdateRectangle(Vector2 newPos)
