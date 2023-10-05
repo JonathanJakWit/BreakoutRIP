@@ -19,4 +19,10 @@
     <Message Text="Restoring dotnet tools" Importance="High" />
     <Exec Command="dotnet tool restore" />
   </Target>
+  <ItemGroup>
+    <EditorConfigFiles Remove="D:\A Skrivbord HDD\A Uni Allting\Courses\ObjProgramming\Projekt\Breakout\BreakoutRIP\.editorconfig" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="D:\A Skrivbord HDD\A Uni Allting\Courses\ObjProgramming\Projekt\Breakout\BreakoutRIP\.editorconfig" />
+  </ItemGroup>
 </Project>
