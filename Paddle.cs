@@ -2,32 +2,20 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BreakoutRIP
 {
-    public class Paddle
+    public class Paddle : MovableSprite
     {
-        public Texture2D Texture;
-        public Vector2 Position;
-        public Rectangle CollisionRectangle;
-        public Color Color;
-
         private int speed;
         private Vector2 startPosition;
         private Keys moveLeftKey;
         private Keys moveRightKey;
 
         public Paddle(Texture2D texture, Vector2 position, Keys moveLKey, Keys moveRKey, Color color)
+            : base(texture, position, color, new(0, 0))
         {
-            Texture = texture;
-            Position = position;
-            CollisionRectangle = new Rectangle(((int)position.X), ((int)position.Y), texture.Width, texture.Height);
-            Color = color;
-
             speed = 15;
             startPosition = position;
             moveLeftKey = moveLKey;
@@ -42,7 +30,6 @@ namespace BreakoutRIP
 
         private void UpdateRectangle(Vector2 newPos)
         {
-            //CollisionRectangle = new Rectangle((int)newPos.X, (int)newPos.Y, Texture.Width, Texture.Height);
             CollisionRectangle = new Rectangle((int)newPos.X, (int)newPos.Y, CollisionRectangle.Width, CollisionRectangle.Height);
         }
 

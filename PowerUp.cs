@@ -1,19 +1,10 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BreakoutRIP
 {
-    public class PowerUp
+    public class PowerUp : MovableSprite
     {
-        public Texture2D Texture;
-        public Vector2 Position;
-        public Rectangle CollisionRectangle;
-        public Color Color;
         public bool IsActive;
         public bool IsBroken;
         public bool IsHit;
@@ -32,11 +23,8 @@ namespace BreakoutRIP
         private float timeWhenPowerUpHit;
 
         public PowerUp(Texture2D texture, Vector2 position, Color color, int powerUpIndex = 1, int fallDownSpeed = 3, int gameWindowMaxY = 720)
+            : base(texture, position, color, new(0, fallDownSpeed))
         {
-            Texture = texture;
-            Position = position;
-            CollisionRectangle = new Rectangle(((int)position.X), ((int)position.Y), texture.Width, texture.Height);
-            Color = color;
             IsBroken = false;
             PowerUpIndex = powerUpIndex;
             fallSpeed = fallDownSpeed;
@@ -85,13 +73,6 @@ namespace BreakoutRIP
                     timeWhenPowerUpHit = (float)gameTime.ElapsedGameTime.TotalSeconds;
                     isFirstTimeHit = false;
                 }
-                //else
-                //{
-                //    if (IsTimerUp(gameTime))
-                //    {
-
-                //    }
-                //}
             }
 
             if (!IsBroken && IsActive)

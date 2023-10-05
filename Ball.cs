@@ -1,32 +1,19 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BreakoutRIP
 {
-    public class Ball
+    public class Ball : MovableSprite
     {
-        public Texture2D Texture;
-        public Vector2 Position;
-        public Rectangle CollisionRectangle;
-        public Color Color;
-
         private Vector2 direction;
         private int speed;
         private Vector2 startPosition;
         private Vector2 startDirection;
         private int windowSizeX;
 
-        public Ball(Texture2D texture, Vector2 position, int windowXSize)
+        public Ball(Texture2D texture, Vector2 position, Color color, int windowXSize)
+            : base(texture, position, color, new(0, 0))
         {
-            Texture = texture;
-            Position = position;
-            CollisionRectangle = new Rectangle(((int)position.X), ((int)position.Y), texture.Width, texture.Height);
-            Color = Color.DarkRed;
             speed = 7;
             direction = new Vector2(0.1f, speed);
 
@@ -50,6 +37,8 @@ namespace BreakoutRIP
         public void TestChangeDirection(Paddle paddle, bool isPaddle = false)
         {
             float changeXValue = 0f;
+            int xValueDivider = 10;
+            float blockSlowDownDirectionFactor = 0.6f;
 
             if (isPaddle)
             {
@@ -59,23 +48,23 @@ namespace BreakoutRIP
                 if (ballMidPoint.X > paddleMidPoint.X)
                 {
                     changeXValue = ballMidPoint.X - paddleMidPoint.X;
-                    changeXValue = changeXValue / 10;
+                    changeXValue = changeXValue / xValueDivider;
                 }
                 else if (ballMidPoint.X < paddleMidPoint.X)
                 {
                     changeXValue = paddleMidPoint.X - ballMidPoint.X;
-                    changeXValue = changeXValue / 10;
+                    changeXValue = changeXValue / xValueDivider;
                     changeXValue = changeXValue * -1;
                 }
                 else
                 {
                     changeXValue = ballMidPoint.X - paddleMidPoint.X + 0.1f;
-                    changeXValue = changeXValue / 10;
+                    changeXValue = changeXValue / xValueDivider;
                 }
             }
             else
             {
-                changeXValue = direction.X * -1 * 0.75f;
+                changeXValue = direction.X * -1 * blockSlowDownDirectionFactor;
             }
 
             Vector2 newDir = new Vector2(direction.X + changeXValue, direction.Y * -1);

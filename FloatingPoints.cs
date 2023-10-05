@@ -1,19 +1,10 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BreakoutRIP
 {
-    public class FloatingPoints
+    public class FloatingPoints : MovableSprite
     {
-        public Texture2D Texture;
-        public Vector2 Position;
-        public Rectangle CollisionRectangle;
-        public Color Color;
         public bool IsBroken;
         public int PointAmount;
 
@@ -21,11 +12,8 @@ namespace BreakoutRIP
         private int windowMaxY;
 
         public FloatingPoints(Texture2D texture, Vector2 position, Color color, int pointAmount = 1, int fallDownSpeed = 3, int gameWindowMaxY = 720)
+            : base( texture, position, color, new(fallDownSpeed, 0))
         {
-            Texture = texture;
-            Position = position;
-            CollisionRectangle = new Rectangle(((int)position.X), ((int)position.Y), texture.Width, texture.Height);
-            Color = color;
             IsBroken = false;
             PointAmount = pointAmount;
             fallSpeed = fallDownSpeed;

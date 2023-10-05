@@ -1,19 +1,18 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BreakoutRIP
 {
-    public class Block
+    public class Block : MovableSprite
     {
-        public Texture2D Texture;
-        public Vector2 Position;
-        public Rectangle CollisionRectangle;
-        public Color Color;
+        public enum BlockTypes
+        {
+            Normal,
+            Super,
+            Falling,
+            CloseTime
+        }
+        public BlockTypes BlockType;
         public bool IsBroken;
         public bool IsFalling;
         public int PointAmount;
@@ -22,12 +21,10 @@ namespace BreakoutRIP
 
         private int fallDownSpeed;
 
-        public Block(Texture2D texture, Vector2 position, Color color, int health = 1, int pointAmount = 1, bool isFalling = false, int fallSpeed = 3)
+        public Block(Texture2D texture, Vector2 position, Color color, BlockTypes blockType, int health = 1, int pointAmount = 1, bool isFalling = false, int fallSpeed = 3)
+            : base(texture, position, color, new(0, fallSpeed))
         {
-            Texture = texture;
-            Position = position;
-            CollisionRectangle = new Rectangle(((int)position.X), ((int)position.Y), texture.Width, texture.Height);
-            Color = color;
+            BlockType = blockType;
             IsBroken = false;
             IsFalling = isFalling;
             PointAmount = pointAmount;

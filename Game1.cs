@@ -1,13 +1,8 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using SharpDX.Direct3D9;
 using System;
 using System.Collections.Generic;
-using System.Drawing.Text;
-using System.Linq;
-using System.Security.Policy;
-using System.Transactions;
 
 namespace BreakoutRIP
 {
@@ -56,6 +51,7 @@ namespace BreakoutRIP
         private Texture2D gameOverScreenBG;
         private Vector2 pointTextPosition;
         private Vector2 timerTextPosition;
+        private int borderPixelCount;
         // Background Textures & Fonts - END //
 
         // Block Texture and Array - BEGIN //
@@ -113,6 +109,7 @@ namespace BreakoutRIP
 
         private int playerPoints;
         private int playerLives;
+        private int pointsToSpawnNewBall;
         // Counter & UI-Logic - END //
 
 
@@ -126,6 +123,8 @@ namespace BreakoutRIP
         private int brokenBlocksSincePaddleHit;
         private bool isPaused;
         private bool playerWon;
+        private int closeBlockStartHealth;
+        private Vector2 voidPosition;
         // Extras - END //
         #endregion Declarations
 
@@ -134,19 +133,6 @@ namespace BreakoutRIP
             _graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
-        }
-
-        private bool IsHovering(MouseState mouseState, Rectangle bounds)
-        {
-            bool isHovering = false;
-
-            //if (mouseState.Position.X > bounds.X && mouseState.Position.X < bounds.)
-            if (bounds.Contains(mouseState.Position))
-            {
-                isHovering = true;
-            }
-
-            return isHovering;
         }
 
         protected override void Initialize()
@@ -160,6 +146,7 @@ namespace BreakoutRIP
             _gameState = GameStates.Start;
             firstGameOverUpdate = true;
             _currentLevel = Levels.Level1;
+            borderPixelCount = 10;
             // GameStates & Screen-Logic - END //
 
             // Mouse & Keyboard States - BEGIN //
@@ -208,6 +195,7 @@ namespace BreakoutRIP
 
             playerPoints = 0;
             playerLives = 3;
+            pointsToSpawnNewBall = 15;
             ballNr = 1;
             // Counter & UI Logic - END //
 
@@ -220,6 +208,8 @@ namespace BreakoutRIP
             isPaused = false;
             playerWon = true;
             isCloseTime = false;
+            closeBlockStartHealth = 2;
+            voidPosition = new Vector2(-100, -100);
             // Extras - END //
 
             base.Initialize();
@@ -253,8 +243,9 @@ namespace BreakoutRIP
             _graphics.ApplyChanges();
 
             backgroundBounds = new Rectangle(0, 0, GameWindowWidthPixels, GameWindowHeightPixels);
-            pointTextPosition = new Vector2(GameWindowWidthPixels - 150, GameWindowHeightPixels / 2 - 100);
-            timerTextPosition = new Vector2(GameWindowWidthPixels - 150, GameWindowHeightPixels / 2 + 100);
+            int textAlignmentY = GameWindowHeightPixels / 2 - borderPixelCount - 100;
+            pointTextPosition = new Vector2(GameWindowWidthPixels - borderPixelCount - ExtraWidthPixels / 2, textAlignmentY);
+            timerTextPosition = new Vector2(GameWindowWidthPixels - borderPixelCount - ExtraWidthPixels / 2, textAlignmentY*2);
 
             // StartScreen - BEGIN //
             Vector2 playButtonPos = new Vector2(GameWindowWidthPixels / 2 - buttonTexture.Width / 2, GameWindowHeightPixels / 2);
@@ -264,13 +255,13 @@ namespace BreakoutRIP
             // GameOverScreen - BEGIN //
             Vector2 playAgainButtonPos = new Vector2(GameWindowWidthPixels / 2 - buttonTexture.Width / 2, GameWindowHeightPixels / 2);
             playAgainButton = new Button(buttonTexture, playAgainButtonPos, Color.Lime);
-            Vector2 exitButtonPos = new Vector2(GameWindowWidthPixels / 2 - buttonTexture.Width / 2, GameWindowHeightPixels / 2 + buttonTexture.Height + 10);
+            Vector2 exitButtonPos = new Vector2(GameWindowWidthPixels / 2 - buttonTexture.Width / 2, GameWindowHeightPixels / 2 + buttonTexture.Height + borderPixelCount);
             exitButton = new Button(buttonTexture, exitButtonPos, Color.Red);
             // GameOverScreen - END //
 
             // Initialize block2darray
-            Vector2 fBP = new Vector2(-100, -100);
-            Block fB = new Block(blockTexture, fBP, Color.White);
+            Vector2 fBP = voidPosition;
+            Block fB = new Block(blockTexture, fBP, Color.White, Block.BlockTypes.Normal);
             filledBlock2DArray = new Block[,]
             {
                 { fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB, fB },
@@ -290,19 +281,20 @@ namespace BreakoutRIP
             {
                 for (int columnIndex = 0; columnIndex < blockColumnCount; columnIndex++)
                 {
-                    Vector2 curBlockPos = new Vector2(columnIndex * blockTexture.Width + 10, rowIndex * blockTexture.Height + 10);
+                    Vector2 curBlockPos = new Vector2(columnIndex * blockTexture.Width + borderPixelCount, rowIndex * blockTexture.Height +borderPixelCount);
                     Color color = blockColorOrder[rowIndex+1];
 
-                    Block block = new Block(blockTexture, curBlockPos, color);
+                    Block block = new Block(blockTexture, curBlockPos, color, Block.BlockTypes.Normal);
                     block2DArray[rowIndex, columnIndex] = block;
                 }
             }
 
             closeBlockList = new List<Block>();
+            int closeBlockStartXAddition = borderPixelCount + 4 * blockTexture.Width;
             for (int i = 0; i < 8; i++)
             {
-                Vector2 curCloseBlockPosition = new Vector2(i * blockTexture.Width + 10 + 4 * blockTexture.Width, blockTexture.Height * 10 + 10);
-                Block curCloseBlock = new Block(blockTexture, curCloseBlockPosition, Color.Gold, 5);
+                Vector2 curCloseBlockPosition = new Vector2(i * blockTexture.Width + closeBlockStartXAddition, blockTexture.Height * borderPixelCount + borderPixelCount);
+                Block curCloseBlock = new Block(blockTexture, curCloseBlockPosition, Color.Gold, Block.BlockTypes.CloseTime, closeBlockStartHealth);
                 closeBlockList.Add(curCloseBlock);
             }
 
@@ -314,19 +306,32 @@ namespace BreakoutRIP
             floatingPointsList = new List<FloatingPoints>();
             // FloatingPoints - END //
 
-            Vector2 paddle1Pos = new Vector2(GameWindowWidthPixels / 2 - paddleTexture.Width / 2 - paddleTexture.Width - ExtraWidthPixels, GameWindowHeightPixels - paddleTexture.Height / 2 - 5);
-            Vector2 paddle2Pos = new Vector2(GameWindowWidthPixels / 2 - paddleTexture.Width / 2 + paddleTexture.Width - ExtraWidthPixels, GameWindowHeightPixels - paddleTexture.Height / 2 - 5);
+            Vector2 paddle1Pos = new Vector2(GameWindowWidthPixels / 2 - paddleTexture.Width / 2 - paddleTexture.Width - ExtraWidthPixels, GameWindowHeightPixels - paddleTexture.Height / 2 - borderPixelCount);
+            Vector2 paddle2Pos = new Vector2(GameWindowWidthPixels / 2 - paddleTexture.Width / 2 + paddleTexture.Width - ExtraWidthPixels, GameWindowHeightPixels - paddleTexture.Height / 2 - borderPixelCount);
             paddle1 = new Paddle(paddleTexture, paddle1Pos, Keys.Left, Keys.Right, Color.White);
             paddle2 = new Paddle(paddleTexture, paddle2Pos, Keys.S, Keys.D, Color.DarkBlue);
             
             //Vector2 ballPos = new Vector2(GameWindowWidthPixels / 2 - ballTexture.Width / 2 - ExtraWidthPixels, GameWindowHeightPixels / 2 + 80);
-            Vector2 ballPos = new Vector2(paddle1.Position.X, GameWindowHeightPixels / 2 + 80);
-            ball1 = new Ball(ballTexture, ballPos, GameWindowWidthPixels - ExtraWidthPixels);
+            Vector2 ballPos = new Vector2(paddle1.Position.X, GameWindowHeightPixels / 2);
+            ball1 = new Ball(ballTexture, ballPos, Color.DarkRed, GameWindowWidthPixels - ExtraWidthPixels);
             ballList = new List<Ball>();
             ballList.Add(ball1);
 
-            Vector2 powerUpPos = new Vector2((GameWindowWidthPixels - ExtraWidthPixels) / 2, GameWindowHeightPixels / 2 + 50);
+            Vector2 powerUpPos = new Vector2((GameWindowWidthPixels - ExtraWidthPixels) / 2, GameWindowHeightPixels / 2);
             powerUp1 = new PowerUp(powerUpTexture, powerUpPos, Color.Orange);
+        }
+        
+        private bool IsHovering(MouseState mouseState, Rectangle bounds)
+        {
+            bool isHovering = false;
+
+            //if (mouseState.Position.X > bounds.X && mouseState.Position.X < bounds.)
+            if (bounds.Contains(mouseState.Position))
+            {
+                isHovering = true;
+            }
+
+            return isHovering;
         }
 
         private void ResetLevel()
@@ -335,11 +340,9 @@ namespace BreakoutRIP
             switch (_currentLevel)
             {
                 case Levels.Level1:
-                    foreach (Ball ball in ballList)
-                    {
-                        ball.ResetBall();
-                    }
-                    //ball1.ResetBall();
+                    ballList.Clear();
+                    ball1.ResetBall();
+                    ballList.Add(ball1);
                     paddle1.ResetPaddle();
                     paddle2.ResetPaddle();
 
@@ -347,10 +350,10 @@ namespace BreakoutRIP
                     {
                         for (int columnIndex = 0; columnIndex < blockColumnCount; columnIndex++)
                         {
-                            Vector2 curBlockPos = new Vector2(columnIndex * blockTexture.Width + 10, rowIndex * blockTexture.Height + 10);
+                            Vector2 curBlockPos = new Vector2(columnIndex * blockTexture.Width + borderPixelCount, rowIndex * blockTexture.Height + borderPixelCount);
                             Color color = blockColorOrder[rowIndex + 1];
 
-                            Block block = new Block(blockTexture, curBlockPos, color);
+                            Block block = new Block(blockTexture, curBlockPos, color, Block.BlockTypes.Normal);
                             block2DArray[rowIndex, columnIndex] = block;
                         }
                     }
@@ -370,11 +373,9 @@ namespace BreakoutRIP
                     break;
 
                 case Levels.Level2:
-                    foreach (Ball ball in ballList)
-                    {
-                        ball.ResetBall();
-                    }
-                    //ball1.ResetBall();
+                    ballList.Clear();
+                    ball1.ResetBall();
+                    ballList.Add(ball1);
                     paddle1.ResetPaddle();
                     paddle2.ResetPaddle();
 
@@ -382,10 +383,10 @@ namespace BreakoutRIP
                     {
                         for (int columnIndex = 0; columnIndex < blockColumnCount; columnIndex++)
                         {
-                            Vector2 curBlockPos = new Vector2(columnIndex * blockTexture.Width + 10, rowIndex * blockTexture.Height + 10);
-                            Color color = blockColorOrder[rowIndex + 1 + 8];
+                            Vector2 curBlockPos = new Vector2(columnIndex * blockTexture.Width + borderPixelCount, rowIndex * blockTexture.Height + borderPixelCount);
+                            Color color = blockColorOrder[rowIndex + 1 + blockColorOrder.Count / 2];
 
-                            Block block = new Block(blockTexture, curBlockPos, color);
+                            Block block = new Block(blockTexture, curBlockPos, color, Block.BlockTypes.Normal);
                             block2DArray[rowIndex, columnIndex] = block;
                         }
                     }
@@ -408,9 +409,10 @@ namespace BreakoutRIP
                     break;
             }
         }
+        
         private void SpawnNewBall()
         {
-            Ball newBall = new Ball(ball1.Texture, new(ball1.Position.X + ball1.Texture.Width, ball1.Position.Y), GameWindowWidthPixels - ExtraWidthPixels);
+            Ball newBall = new Ball(ball1.Texture, new(ball1.Position.X + ball1.Texture.Width, ball1.Position.Y), Color.Purple, GameWindowWidthPixels - ExtraWidthPixels);
             ballList.Add(newBall);
             ballNr++;
         }
@@ -419,23 +421,27 @@ namespace BreakoutRIP
         {
             Color blockColor = Color.DarkGoldenrod;
             int blockHealth = 1;
+            int blockPoints = 3;
             int blockFallSpeed = 3;
             bool willFall = true;
             int randomWillFallNr = _random.Next(4);
+            Block.BlockTypes blockType = Block.BlockTypes.Normal;
             if (randomWillFallNr >= 2)
             {
                 willFall = true;
+                blockType = Block.BlockTypes.Falling;
             }
             else if (randomWillFallNr < 2)
             {
                 blockHealth = 3;
                 blockFallSpeed = 1;
                 blockColor = Color.Magenta;
+                blockType = Block.BlockTypes.Falling;
             }
             int xPosition = _random.Next(GameWindowWidthPixels - ExtraWidthPixels - blockTexture.Width);
             int yPosition = blockRowCount*blockTexture.Height + _random.Next(2*blockTexture.Height);
             Vector2 newBlockPosition = new Vector2(xPosition, yPosition);
-            Block newBlock = new Block(blockTexture, newBlockPosition, blockColor, blockHealth, 3, willFall, blockFallSpeed);
+            Block newBlock = new Block(blockTexture, newBlockPosition, blockColor, blockType, blockHealth, blockPoints, willFall, blockFallSpeed);
             randomBlockList.Add(newBlock);
         }
 
@@ -516,6 +522,168 @@ namespace BreakoutRIP
 
         }
 
+        private bool UpdateBlockToBallCollision(Block blockToCheck)
+        {
+            bool collisionFound = false;
+            foreach (Ball ball in ballList)
+            {
+                //if (blockToCheck.BlockType == Block.BlockTypes.Normal)
+                if (blockToCheck.BlockType != Block.BlockTypes.CloseTime)
+                {
+                    if (ball.CollisionRectangle.Intersects(blockToCheck.CollisionRectangle))
+                    {
+                        ball.TestChangeDirection(paddle1);
+                        playerPoints += blockToCheck.PointAmount;
+
+                        blockToCheck.Health--;
+                        if (blockToCheck.Health <= 0)
+                        {
+                            blockToCheck.IsBroken = true;
+                            Vector2 newFloatingPointPosition = new Vector2(blockToCheck.Position.X + blockToCheck.Texture.Width / 2, blockToCheck.Position.Y);
+                            FloatingPoints newFloatingPoint = new FloatingPoints(floatingPointTexture, newFloatingPointPosition,
+                                Color.White, blockToCheck.PointAmount);
+                            floatingPointsList.Add(newFloatingPoint);
+                        }
+
+                        collisionFound = true;
+                        break;
+                    }
+                }
+                else if (blockToCheck.BlockType == Block.BlockTypes.CloseTime)
+                {
+                    if (ball.CollisionRectangle.Intersects(blockToCheck.CollisionRectangle))
+                    {
+                        blockToCheck.Health--;
+                        if (blockToCheck.Health <= 0)
+                        {
+                            blockToCheck.IsBroken = true;
+                            playerPoints += blockToCheck.PointAmount;
+                            ball.TestChangeDirection(paddle1);
+                        }
+
+                        collisionFound = true;
+                        break;
+                    }
+                }
+            }
+
+            return collisionFound;
+        }
+
+        private void UpdateCollisions(GameTime gameTime)
+        {
+            // Check Collisions - BEGIN //
+            foreach (Ball ball in ballList)
+            {
+                // Check if the ball is colliding with any paddle
+                if (ball.CollisionRectangle.Intersects(paddle1.CollisionRectangle))
+                {
+                    // Ger spelaren 2x poäng när bollen tar mer än ett block i rad utan att träffa paddeln
+                    if (brokenBlocksSincePaddleHit > 1)
+                    {
+                        playerPoints += brokenBlocksSincePaddleHit * 2;
+                    }
+                    ball.TestChangeDirection(paddle1, true);
+                }
+                else if (ball.CollisionRectangle.Intersects(paddle2.CollisionRectangle))
+                {
+                    // Ger spelaren 2x poäng när bollen tar mer än ett block i rad utan att träffa paddeln
+                    if (brokenBlocksSincePaddleHit > 1)
+                    {
+                        playerPoints += brokenBlocksSincePaddleHit * 2;
+                    }
+                    ball.TestChangeDirection(paddle2, true);
+                }
+            }
+
+            // Check and update the powerup if it is active
+            if (powerUp1.IsActive)
+            {
+                powerUp1.Update(gameTime);
+                if (powerUp1.CollisionRectangle.Intersects(paddle1.CollisionRectangle))
+                {
+                    ActivatePower(powerUp1.PowerUpIndex);
+                    powerUp1.IsHit = true;
+                }
+                else if (powerUp1.CollisionRectangle.Intersects(paddle2.CollisionRectangle))
+                {
+                    ActivatePower(powerUp1.PowerUpIndex);
+                    powerUp1.IsHit = true;
+                }
+
+                if (powerUp1.IsActive)
+                {
+                    if (powerUp1.IsTimerUp(gameTime))
+                    {
+                        DeactivatePower(powerUp1.PowerUpIndex);
+                    }
+                }
+            }
+
+            // Checks all blocks that aren't broken to see if they have collided with the ball
+            bool endCollisions = false; ;
+            for (int rowIndex = 0; rowIndex < blockRowCount; rowIndex++)
+            {
+                for (int columnIndex = 0; columnIndex < blockColumnCount; columnIndex++)
+                {
+                    if (!block2DArray[rowIndex, columnIndex].IsBroken)
+                    {
+                        endCollisions = UpdateBlockToBallCollision(block2DArray[rowIndex, columnIndex]);
+                    }
+
+                    if (endCollisions)
+                    {
+                        rowIndex = blockRowCount;
+                        columnIndex = blockColumnCount;
+                    }
+                }
+            }
+
+            // If the time is close and the closeTime blocks have spawned then check their collision too
+            if (isCloseTime)
+            {
+                foreach (Block curCloseBlock in closeBlockList)
+                {
+                    if (!curCloseBlock.IsBroken)
+                    {
+                        UpdateBlockToBallCollision(curCloseBlock);
+                    }
+                }
+            }
+
+            if (randomBlockList.Count > 0)
+            {
+                foreach (Block randBlock in randomBlockList)
+                {
+                    if (!randBlock.IsBroken)
+                    {
+                        foreach (Ball ball in ballList)
+                        {
+                            if (ball.CollisionRectangle.Intersects(randBlock.CollisionRectangle))
+                            {
+                                randBlock.Health--;
+                                if (randBlock.Health <= 0)
+                                {
+                                    randBlock.IsBroken = true;
+                                    playerPoints += randBlock.PointAmount;
+                                    ball.TestChangeDirection(paddle1);
+                                }
+                                else
+                                {
+                                    randBlock.Position.Y = randBlock.Position.Y - 10;
+                                    randBlock.UpdateRectangle(new(randBlock.Position.X, randBlock.Position.Y));
+                                    playerPoints += randBlock.PointAmount;
+
+                                    ball.TestChangeDirection(paddle1);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            // Check Collisions - END //
+        }
+
         protected void UpdatePlayingScreen(GameTime gameTime)
         {
             // Update Playing-Screen
@@ -590,8 +758,8 @@ namespace BreakoutRIP
                 }
             }
 
-            // Add ball for every 10 points
-            if (playerPoints >= 10 && ballNr <= playerPoints/10)
+            // Add ball for every 15 points
+            if (playerPoints >= pointsToSpawnNewBall && ballNr <= playerPoints/pointsToSpawnNewBall)
             {
                 SpawnNewBall();
             }
@@ -613,140 +781,9 @@ namespace BreakoutRIP
             }
             oldMouseState = mouseState;
 
-            // Check Collisions - BEGIN //
-            foreach (Ball ball in ballList)
-            {
-                // Check if the ball is colliding with any paddle
-                if (ball.CollisionRectangle.Intersects(paddle1.CollisionRectangle))
-                {
-                    // Ger spelaren 2x poäng när bollen tar mer än ett block i rad utan att träffa paddeln
-                    if (brokenBlocksSincePaddleHit > 1)
-                    {
-                        playerPoints += brokenBlocksSincePaddleHit * 2;
-                    }
-                    ball.TestChangeDirection(paddle1, true);
-                }
-                else if (ball.CollisionRectangle.Intersects(paddle2.CollisionRectangle))
-                {
-                    // Ger spelaren 2x poäng när bollen tar mer än ett block i rad utan att träffa paddeln
-                    if (brokenBlocksSincePaddleHit > 1)
-                    {
-                        playerPoints += brokenBlocksSincePaddleHit * 2;
-                    }
-                    ball.TestChangeDirection(paddle2, true);
-                }
-            }
-
-            if (powerUp1.IsActive)
-            {
-                powerUp1.Update(gameTime);
-                if (powerUp1.CollisionRectangle.Intersects(paddle1.CollisionRectangle))
-                {
-                    ActivatePower(powerUp1.PowerUpIndex);
-                    powerUp1.IsHit = true;
-                }
-                else if (powerUp1.CollisionRectangle.Intersects(paddle2.CollisionRectangle))
-                {
-                    ActivatePower(powerUp1.PowerUpIndex);
-                    powerUp1.IsHit = true;
-                }
-
-                if (powerUp1.IsActive)
-                {
-                    if (powerUp1.IsTimerUp(gameTime))
-                    {
-                        DeactivatePower(powerUp1.PowerUpIndex);
-                    }
-                }
-            }
-
-            // Checks all blocks that aren't broken to see if they have collided with the ball
-            for (int rowIndex = 0; rowIndex < blockRowCount; rowIndex++)
-            {
-                for (int columnIndex = 0; columnIndex < blockColumnCount; columnIndex++)
-                {
-                    if (!block2DArray[rowIndex, columnIndex].IsBroken)
-                    {
-                        foreach (Ball ball in ballList)
-                        {
-                            if (ball.CollisionRectangle.Intersects(block2DArray[rowIndex, columnIndex].CollisionRectangle))
-                            {
-                                ball.TestChangeDirection(paddle1);
-                                playerPoints += block2DArray[rowIndex, columnIndex].PointAmount;
-
-                                block2DArray[rowIndex, columnIndex].Health--;
-                                if (block2DArray[rowIndex, columnIndex].Health <= 0)
-                                {
-                                    block2DArray[rowIndex, columnIndex].IsBroken = true;
-                                    Vector2 newFloatingPointPosition = new Vector2(block2DArray[rowIndex, columnIndex].Position.X + block2DArray[rowIndex, columnIndex].Texture.Width / 2, block2DArray[rowIndex, columnIndex].Position.Y);
-                                    FloatingPoints newFloatingPoint = new FloatingPoints(floatingPointTexture, newFloatingPointPosition,
-                                        Color.White, block2DArray[rowIndex, columnIndex].PointAmount);
-                                    floatingPointsList.Add(newFloatingPoint);
-                                }
-
-                                rowIndex = blockRowCount + 1;
-                                columnIndex = blockColumnCount + 1;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (isCloseTime)
-            {
-                foreach (Block curCloseBlock in closeBlockList)
-                {
-                    if (!curCloseBlock.IsBroken)
-                    {
-                        foreach (Ball ball in ballList)
-                        {
-                            if (ball.CollisionRectangle.Intersects(curCloseBlock.CollisionRectangle))
-                            {
-                                curCloseBlock.Health--;
-                                if (curCloseBlock.Health <= 0)
-                                {
-                                    curCloseBlock.IsBroken = true;
-                                    playerPoints += curCloseBlock.PointAmount;
-                                    ball.TestChangeDirection(paddle1);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (randomBlockList.Count > 0)
-            {
-                foreach (Block randBlock in randomBlockList)
-                {
-                    if (!randBlock.IsBroken)
-                    {
-                        foreach (Ball ball in ballList)
-                        {
-                            if (ball.CollisionRectangle.Intersects(randBlock.CollisionRectangle))
-                            {
-                                randBlock.Health--;
-                                if (randBlock.Health <= 0)
-                                {
-                                    randBlock.IsBroken = true;
-                                    playerPoints += randBlock.PointAmount;
-                                    ball.TestChangeDirection(paddle1);
-                                }
-                                else
-                                {
-                                    randBlock.Position.Y = randBlock.Position.Y - 10;
-                                    randBlock.UpdateRectangle(new(randBlock.Position.X, randBlock.Position.Y));
-                                    playerPoints += randBlock.PointAmount;
-
-                                    ball.TestChangeDirection(paddle1);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            // Check Collisions - END //
+            //// Check Collisions - BEGIN //
+            UpdateCollisions(gameTime);
+            //// Check Collisions - END //
 
             // Sort through and update the block-array to filter out broken blocks
             Block[,] newBlock2DArray = filledBlock2DArray;
@@ -881,7 +918,7 @@ namespace BreakoutRIP
                         {
                             if (!block2DArray[rowIndex, columnIndex].IsBroken)
                             {
-                                _spriteBatch.Draw(block2DArray[rowIndex, columnIndex].Texture, block2DArray[rowIndex, columnIndex].CollisionRectangle, block2DArray[rowIndex, columnIndex].Color);
+                                block2DArray[rowIndex, columnIndex].Draw(_spriteBatch);
                             }
                         }
                     }
@@ -890,7 +927,7 @@ namespace BreakoutRIP
                     {
                         if (!powerUp1.IsBroken)
                         {
-                            _spriteBatch.Draw(powerUp1.Texture, powerUp1.CollisionRectangle, powerUp1.Color);
+                            powerUp1.Draw(_spriteBatch);
                         }
                     }
 
@@ -900,7 +937,7 @@ namespace BreakoutRIP
                         {
                             if (!curCBlock.IsBroken)
                             {
-                                _spriteBatch.Draw(curCBlock.Texture, curCBlock.CollisionRectangle, curCBlock.Color);
+                                curCBlock.Draw(_spriteBatch);
                             }
                         }
                     }
@@ -911,7 +948,7 @@ namespace BreakoutRIP
                         {
                             if (!curRandomBlock.IsBroken)
                             {
-                                _spriteBatch.Draw(curRandomBlock.Texture, curRandomBlock.CollisionRectangle, curRandomBlock.Color);
+                                curRandomBlock.Draw(_spriteBatch);
                             }
                         }
                     }
@@ -920,24 +957,25 @@ namespace BreakoutRIP
                     {
                         if (!floatingPoint.IsBroken)
                         {
-                            _spriteBatch.Draw(floatingPoint.Texture, floatingPoint.CollisionRectangle, floatingPoint.Color);
+                            //_spriteBatch.Draw(floatingPoint.Texture, floatingPoint.CollisionRectangle, floatingPoint.Color);
+                            floatingPoint.Draw(_spriteBatch);
                         }
                     }
 
                     foreach (Ball ball in ballList)
                     {
-                        _spriteBatch.Draw(ball.Texture, ball.CollisionRectangle, ball.Color);
+                        ball.Draw(_spriteBatch);
                     }
-                    //_spriteBatch.Draw(ball1.Texture, ball1.CollisionRectangle, ball1.Color);
-                    _spriteBatch.Draw(paddle1.Texture, paddle1.CollisionRectangle, paddle1.Color);
-                    _spriteBatch.Draw(paddle2.Texture, paddle2.CollisionRectangle, paddle2.Color);
+                    
+                    paddle1.Draw(_spriteBatch);
+                    paddle2.Draw(_spriteBatch);
 
                     // Draw Points and Time - BEGIN //
                     Vector2 textMidPoint = gameInfoFont.MeasureString(playerPoints.ToString()) / 2;
-                    _spriteBatch.DrawString(gameInfoFont, playerPoints.ToString(), pointTextPosition, Color.White, 0, textMidPoint, 10.0f, SpriteEffects.None, 0.5f);
+                    _spriteBatch.DrawString(gameInfoFont, playerPoints.ToString(), pointTextPosition, Color.White, 0, textMidPoint, 1.0f, SpriteEffects.None, 0.5f);
 
                     textMidPoint = gameInfoFont.MeasureString(levelTimeCounter.ToString()) / 2;
-                    _spriteBatch.DrawString(gameInfoFont, levelTimeCounter.ToString(), timerTextPosition, Color.White, 0, textMidPoint, 10.0f, SpriteEffects.None, 0.5f);
+                    _spriteBatch.DrawString(gameInfoFont, levelTimeCounter.ToString(), timerTextPosition, Color.White, 0, textMidPoint, 1.0f, SpriteEffects.None, 0.5f);
                     // Draw Points and Time - END //
                     break;
 

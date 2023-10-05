@@ -27,13 +27,11 @@ Extras - Fixat - Totalpoäng - 20, 21
 - Långsamt fallande block som man kan träffa med bollen flera gånger på vägen ned. - 2p
 - När ett block går sönder 'svävar' poängen ut från kollisionen. - 2p
 
-
+Powerups
 - Powerup1 [Paddle 2x Width] - 1p
 
 Extras - To Do
 
-
 Extras - Maybe
-
 
 Extras - Nah
