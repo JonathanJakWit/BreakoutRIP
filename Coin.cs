@@ -18,7 +18,8 @@ namespace BreakoutRIP
         public Coin(Vector2 position, ContentManager Content)
         {
             _texture ??= Content.Load<Texture2D>("Animations/coin_sprite_sheet");
-            _animation = new Animation2D(_texture, 5, 0.1f);
+            //_texture ??= Content.Load<Texture2D>("Animations/coin_spritesheet");
+            _animation = new Animation2D(_texture, 6, 0.1f);
             _position = position;
         }
 

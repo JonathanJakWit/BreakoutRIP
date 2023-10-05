@@ -42,7 +42,8 @@ namespace BreakoutRIP
 
         private void UpdateRectangle(Vector2 newPos)
         {
-            CollisionRectangle = new Rectangle((int)newPos.X, (int)newPos.Y, Texture.Width, Texture.Height);
+            //CollisionRectangle = new Rectangle((int)newPos.X, (int)newPos.Y, Texture.Width, Texture.Height);
+            CollisionRectangle = new Rectangle((int)newPos.X, (int)newPos.Y, CollisionRectangle.Width, CollisionRectangle.Height);
         }
 
         public void MoveLeft()

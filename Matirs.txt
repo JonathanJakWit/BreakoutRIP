@@ -10,22 +10,23 @@
 Egen Funktionalitet
 - Pausknapp
 
-Extras - Fixat - Totalpoäng - 16, 20
+Extras - Fixat - Totalpoäng - 20, 21
 - Styra med tangentbordet. - 1p
 - HUD. Krävs mer än bara poängen på skärmen. - 1p [Har med tid också]
 - Omstart - 1p
-- Flera nivåer - 2p
 - Bonuspoäng om man studsar på fler än ett block i sekvens. - 1p
 - Två paddlar - 1p
 - Livsystem - 1p
 - Vinst/förlust. - 1p
-- Spawna nya block när spelet nästan är klart - 2p
 - Spawna nya block lite då och då - 1p
-- Slumpvis fallande block - 2p
 - Superblock - 1p
+- Poängen studsar som bollen och därmed kan spelaren fånga dubbel poäng med paddeln - 1p
+- Flera nivåer - 2p
+- Spawna nya block när spelet nästan är klart - 2p
+- Slumpvis fallande block - 2p
 - Långsamt fallande block som man kan träffa med bollen flera gånger på vägen ned. - 2p
 - När ett block går sönder 'svävar' poängen ut från kollisionen. - 2p
-- Poängen studsar som bollen och därmed kan spelaren fånga dubbel poäng med paddeln - 1p
+
 
 - Powerup1 [Paddle 2x Width] - 1p
 
